@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Local Authority Approval Portal</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 30px; }
+        .container { max-width: 1100px; background: white; margin: 0 auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        h2 { color: #1e293b; border-bottom: 2px solid #cbd5e1; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #1e293b; color: white; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 13px; }
+        .pending { background-color: #fef3c7; color: #d97706; }
+        .approved { background-color: #dcfce7; color: #15803d; }
+        .btn-approve { background-color: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-print { background-color: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Local Leader Approval Panel (Mushubati Sector)</h2>
+    <p>Review incoming community requests and broadcast official clearance verification keys.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Tracking ID</th>
+                <th>Citizen Name</th>
+                <th>National ID</th>
+                <th>Service Type</th>
+                <th>Status</th>
+                <th>Action Route</th>
+            </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+    </table>
+</div>
+
+<script>
+    async function loadApplications() {
+        const response = await fetch('http://localhost:3000/get-applications');
+        const data = await response.json();
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = "";
+
+        if(data.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>No records registered inside current system scope database.</td></tr>";
+            return;
+        }
+
+        data.forEach(app => {
+            const statusClass = app.status === 'Approved' ? 'approved' : 'pending';
+            let actionBtn = `<button class="btn-approve" onclick="approveApp('${app.id}')">Approve & Send OTP</button>`;
+            if(app.status === 'Approved') {
+                actionBtn = `<button class="btn-print" onclick="openCertPage('${app.id}')">Open Claim Certificate</button>`;
+            }
+
+            tbody.insertAdjacentHTML('beforeend', `
+                <tr>
+                    <td><strong>${app.id}</strong></td>
+                    <td>${app.name}</td>
+                    <td>${app.nid}</td>
+                    <td>${app.service}</td>
+                    <td><span class="status-badge ${statusClass}">${app.status}</span></td>
+                    <td>${actionBtn}</td>
+                </tr>
+            `);
+        });
+    }
+
+    async function approveApp(id) {
+        const response = await fetch(`http://localhost:3000/approve-application/${id}`, { method: 'POST' });
+        const result = await response.json();
+        if(result.success) {
+            alert(`✅ Record approved successfully!\n\nSecurity token OTP has been sent via server SMS dispatcher line.`);
+            loadApplications();
+        }
+    }
+
+    function openCertPage(id) {
+        window.open(`certificate.html?id=${id}`, '_blank');
+    }
+
+    window.onload = loadApplications;
+</script>
+</body>
+</html>

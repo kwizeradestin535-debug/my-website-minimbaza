@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MBAZA Local Gateway Portal</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .card { background: white; padding: 40px; border-radius: 12px; max-width: 600px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.05); box-sizing: border-box; position: relative; }
+        .wide-card { max-width: 1100px; }
+        h2 { color: #1e3a8a; margin-top: 0; text-align: center; font-size: 24px; }
+        p { color: #64748b; font-size: 14px; text-align: center; margin-bottom: 25px; }
+        label { display: block; text-align: left; font-weight: bold; margin-top: 15px; color: #334155; font-size: 14px; }
+        select, input { width: 100%; padding: 12px; margin-top: 6px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 15px; background-color: #f8fafc; }
+        select:focus, input:focus { outline: none; border-color: #1e3a8a; background-color: #fff; }
+        button { width: 100%; padding: 13px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; color: white; background-color: #22c55e; cursor: pointer; margin-top: 25px; transition: 0.2s; }
+        button:hover { background-color: #16a34a; }
+        .btn-login { background-color: #1e3a8a; }
+        .btn-login:hover { background-color: #1e293b; }
+        .btn-reset { background-color: #ea580c; }
+        .btn-reset:hover { background-color: #c2410c; }
+        .btn-logout { background-color: #ef4444; margin-top: 0; width: auto; padding: 10px 20px; float: right; }
+        .btn-logout:hover { background-color: #dc2626; }
+        .error-msg { color: #dc2626; font-size: 14px; margin-top: 15px; font-weight: bold; text-align: center; background: #fee2e2; padding: 10px; border-radius: 6px; }
+        .success-msg { color: #16a34a; font-size: 14px; margin-top: 15px; font-weight: bold; text-align: center; background: #dcfce7; padding: 10px; border-radius: 6px; }
+        .hidden { display: none; }
+        .toggle-container { text-align: center; margin-top: 20px; font-size: 14px; color: #64748b; display: flex; flex-direction: column; gap: 10px; }
+        .toggle-link { color: #2563eb; cursor: pointer; font-weight: bold; text-decoration: underline; }
+        
+        .location-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        th { background-color: #1e293b; color: white; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+        .pending { background-color: #fef3c7; color: #d97706; }
+        .approved { background-color: #dcfce7; color: #15803d; }
+        .btn-approve { background-color: #10b981; padding: 6px 12px; font-size: 13px; margin: 0; width: auto; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        
+        /* CERTIFICATE DESIGN CONFIGURATION */
+        .certificate-container { 
+            background: #ffffff; 
+            padding: 50px; 
+            border: 10px double #1e293b; 
+            position: relative; 
+            margin-top: 20px; 
+            font-family: 'Times New Roman', serif; 
+            color: #000; 
+            box-sizing: border-box; 
+            overflow: hidden; 
+            z-index: 1;
+        }
+        
+        /* WATERMARK BACKGROUND LAYER WITH DIRECT INTERNET IMAGE RECOVERY */
+        .certificate-container::before { 
+            content: ""; 
+            position: absolute; 
+            top: 0; left: 0; width: 100%; height: 100%; 
+            background-image: url('rwandan watermark.png'), url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Coat_of_arms_of_Rwanda.svg/250px-Coat_of_arms_of_Rwanda.svg.png'); 
+            background-repeat: no-repeat;
+            background-position: center center; 
+            background-size: 320px auto; 
+            opacity: 0.08; 
+            z-index: -1; 
+        }
+        
+        .cert-header-logo { text-align: center; margin-bottom: 12px; }
+        .cert-header-logo img { width: 105px; height: auto; display: block; margin: 0 auto; min-height: 100px; }
+        .cert-header { text-align: center; text-transform: uppercase; font-size: 15px; line-height: 1.6; font-weight: bold; }
+        .cert-title { text-align: center; font-size: 26px; font-weight: bold; color: #1e3a8a; margin: 25px 0; text-transform: uppercase; letter-spacing: 1px; }
+        .cert-content { font-size: 18px; line-height: 1.8; text-align: justify; margin-bottom: 30px; }
+        .highlight { font-weight: bold; text-decoration: underline; }
+        .cert-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 60px; }
+        
+        @media print {
+            body { background: white; padding: 0; }
+            .card, button, .btn-logout, .no-print { display: none !important; }
+            #certificatePrintView { margin: 0; border: none; }
+            .certificate-container { border: 10px double #000; }
+            .certificate-container::before { opacity: 0.12; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card" id="authGateway">
+    <h2 id="authTitle">MBAZA Portal Login</h2>
+    <p id="authSubtitle">Log into your profile account to access dashboard services</p>
+    
+    <label for="role">Select Access Role Portal:</label>
+    <select id="role">
+        <option value="citizen">Citizen (Apply for Services)</option>
+        <option value="leader">Local Sector Leader / Admin (Review Dashboard)</option>
+    </select>
+
+    <label for="username">Username:</label>
+    <input type="text" id="username" placeholder="Enter username">
+
+    <label id="passLabel" for="password">Password Key:</label>
+    <input type="password" id="password" placeholder="••••••••">
+
+    <button id="authBtn" class="btn-login" onclick="processAuthSubmit()">Secure Login</button>
+    
+    <div id="authError" class="error-msg" style="display:none;"></div>
+    <div id="authSuccess" class="success-msg" style="display:none;"></div>
+
+    <div class="toggle-container" id="toggleArea">
+        <div>Don't have an account yet? <span class="toggle-link" onclick="switchToRegisterMode()">Create Account Here</span></div>
+        <div>Forgot your login key? <span class="toggle-link" style="color: #ea580c;" onclick="switchToResetMode()">Reset Password</span></div>
+    </div>
+</div>
+
+<div class="card hidden" id="citizenDashboard">
+    <button class="btn-logout" onclick="returnToGateway()">Logout Dashboard</button>
+    <h2>E-Service Request Form</h2>
+    <p style="text-align:left;">Logged in as citizen: <b id="citizenUserDisplay" style="color:#1e3a8a;"></b></p>
+    <div style="clear:both;"></div>
+    
+    <div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 25px; margin-bottom: 25px; margin-top:15px;">
+        <label for="serviceType">Select MBAZA Service Category:</label>
+        <select id="serviceType">
+            <optgroup label="Transport Services">
+                <option value="Motorcycle Authorization Renewal">Motorcycle Authorization Renewal</option>
+                <option value="Application for Driving License Exam (Provisional/Definitive)">Application for Driving License Exam</option>
+                <option value="Driving License Renewal / Duplicate">Driving License Renewal / Duplicate</option>
+                <option value="Motor Vehicle Control (Mechanical Inspection)">Motor Vehicle Control (Voiture Inspection)</option>
+            </optgroup>
+            
+            <optgroup label="Identification & Family Services">
+                <option value="National ID Card Application Replacement">National ID Card Replacement</option>
+                <option value="Child Birth Registration & Mutuelle Update">Child Birth Registration & Mutuelle Update</option>
+                <option value="Certificate of Being Single (Célibataire)">Certificate of Being Single</option>
+                <option value="Certificate of Full Identity (Completo)">Certificate of Full Identity</option>
+                <option value="Local Community Clearance Certificate">Local Community Clearance Certificate</option>
+            </optgroup>
+            
+            <optgroup label="Land & Property Management">
+                <option value="Land Registration & Title Transfer">Land Registration & Title Transfer</option>
+                <option value="Application for Land Subdivision / Merging">Application for Land Subdivision</option>
+                <option value="Building Permit Request Documentation">Building Permit Request</option>
+            </optgroup>
+            
+            <optgroup label="Justice & Security Clearance">
+                <option value="Certificate of Good Conduct / Criminal Record (Extrait de Casier Judiciaire)">Certificate of Good Conduct / Criminal Record</option>
+                <option value="Loss of Document Declaration Portal">Loss of Document Declaration</option>
+            </optgroup>
+            
+            <optgroup label="Business & Local Resource Support">
+                <option value="Rwanda Revenue Authority (RRA) Local Tax Declaration Support">RRA Local Tax Declaration Support</option>
+                <option value="Ejo Heza Community Savings Registration Scheme">Ejo Heza Savings Scheme Registration</option>
+                <option value="Community Health Insurance (Mutuelle de Santé) Payment Slip">Mutuelle de Santé Payment Slip</option>
+            </optgroup>
+        </select>
+
+        <label for="fullName">Full Name:</label>
+        <input type="text" id="fullName" placeholder="Enter full name">
+
+        <label for="nidNumber">National ID (16 Digits):</label>
+        <input type="text" id="nidNumber" placeholder="Enter 16 numbers" maxlength="16">
+
+        <label for="phoneNumber">Phone Number:</label>
+        <input type="text" id="phoneNumber" placeholder="e.g., 078XXXXXXX">
+
+        <div class="location-grid">
+            <div>
+                <label for="provinceSelect">Province:</label>
+                <select id="provinceSelect" onchange="updateDistrictDropdown()"></select>
+            </div>
+            <div>
+                <label for="districtSelect">District:</label>
+                <select id="districtSelect" onchange="updateSectorDropdown()"></select>
+            </div>
+            <div>
+                <label for="sectorSelect">Sector:</label>
+                <select id="sectorSelect"></select>
+            </div>
+        </div>
+
+        <button style="background-color: #22c55e;" onclick="submitApplicationForm()">Submit Request Form</button>
+        <div id="submitStatus" style="margin-top: 15px; font-weight: bold; text-align: center;"></div>
+    </div>
+
+    <div>
+        <h3 style="color:#1e3a8a; margin-top:0;">Claim Approved Certificate</h3>
+        <label for="trackingIdInput">Application Tracking ID:</label>
+        <input type="text" id="trackingIdInput" placeholder="e.g., APP-2026-1234">
+
+        <label for="otpInput">Enter 4-Digit Security OTP:</label>
+        <input type="text" id="otpInput" placeholder="XXXX" maxlength="4">
+
+        <button style="background-color: #3b82f6;" onclick="requestCertificateUnlock()">Verify & Open Document</button>
+        <div id="otpError" class="error-msg" style="display:none;"></div>
+    </div>
+</div>
+
+<div class="card wide-card hidden" id="leaderDashboard">
+    <button class="btn-logout" onclick="returnToGateway()">Logout Panel</button>
+    <h2>Local Authority Approval Portal</h2>
+    <p style="text-align:left;">Welcome Administrator: <b id="leaderUserDisplay" style="color:#10b981;"></b></p>
+    <div style="clear:both;"></div>
+    
+    <div style="overflow-x:auto; margin-top:15px;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Tracking ID</th>
+                    <th>Citizen Name</th>
+                    <th>Location Profile</th>
+                    <th>Service Type</th>
+                    <th>Status</th>
+                    <th>Action Workflow</th>
+                    <th>Console Security OTP</th>
+                </tr>
+            </thead>
+            <tbody id="leaderTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="certificatePrintView" class="hidden" style="max-width: 850px; width:100%; margin: 20px auto;">
+    <div class="no-print" style="margin-bottom: 20px;">
+        <button style="background-color: #22c55e; padding: 12px 20px; font-weight: bold; color:white; border:none; border-radius:6px; cursor:pointer; width:auto;" onclick="window.print()">🖨️ Print Document PDF</button>
+        <button class="btn-logout" style="float: right;" onclick="returnToGateway()">Return to Hub</button>
+        <div style="clear:both;"></div>
+    </div>
+    
+    <div class="certificate-container">
+        <div class="cert-header-logo">
+            <img src="rwandan logo.jpg" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Coat_of_arms_of_Rwanda.svg/250px-Coat_of_arms_of_Rwanda.svg.png';" alt="Republic of Rwanda Coat of Arms">
+        </div>
+        <div class="cert-header">
+            <div style="font-size:19px; font-weight:bold; letter-spacing:0.5px;">Republic of Rwanda</div>
+            <div style="margin-top:4px; font-size:14px; color:#1e293b;"><span id="lbl-province"></span> &bull; <span id="lbl-district"></span> District</div>
+            <div style="font-size:14px; color:#1e293b;"><span id="lbl-sector"></span> Sector</div>
+        </div>
+        
+        <div class="cert-title">Official Clearance Certificate</div>
+        
+        <div class="cert-content">
+            This is to officially certify that Mr./Ms. <span id="lbl-name" class="highlight"></span>, 
+            holding National Identification Number <span id="lbl-nid" class="highlight"></span>, has successfully cleared administrative validation entries for the requested service: <span id="lbl-service" class="highlight"></span>. 
+            The file entry was officially authorized on <span id="lbl-date" class="highlight"></span>.
+        </div>
+        
+        <div class="cert-footer">
+            <div style="border:2px solid #000; padding:10px; font-size:11px; font-weight:bold; background:#fff;">Verified System Integrity</div>
+            <div style="text-align:center; width:250px;"><div style="border-top:1px solid #000; margin-bottom:5px;"></div><strong>Authorized Electronic Signatory</strong></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const BACKEND_URL = 'http://localhost:3000';
+    let currentViewState = "login"; 
+    let activeSessionUser = "";
+
+    // RWANDA GEOGRAPHICAL DATABASE FOR DYNAMIC DROPDOWNS
+    const rwanda_locations = {
+        "City of Kigali": {
+            "Nyarugenge": ["Gitega", "Kanyinya", "Kigali", "Kimisagara", "Mageragere", "Muhima", "Nyakabanda", "Nyamirambo", "Nyarugenge", "Rwezamenyo"],
+            "Gasabo": ["Bumbogo", "Gatsata", "Jali", "Gikomero", "Gisozi", "Jabana", "Kinyinya", "Ndera", "Nduba", "Rusororo", "Rutunga", "Kacyiru", "Kimihurura", "Kimironko", "Remera"],
+            "Kicukiro": ["Gahanga", "Gatenga", "Gikondo", "Kagarama", "Kanombe", "Kicukiro", "Kigarama", "Masaka", "Niboye", "Nyarugunga"]
+        },
+        "Western Province": {
+            "Rutsiro": ["Boneza", "Gihango", "Kigeyo", "Kivumu", "Manihira", "Mukura", "Murunda", "Musasa", "Mushubati", "Nyabirasi", "Nyamusasa", "Pasika"],
+            "Rubavu": ["Bugeshi", "Busasamana", "Cyanzre", "Gisenyi", "Kanama", "Nyakiliba", "Nyamyumba", "Nyundo", "Rubavu", "Rugerero", "Mudende"],
+            "Karongi": ["Bwishyura", "Gishari", "Gishyita", "Gitesi", "Mubuga", "Murambi", "Murundi", "Mutuntu", "Rubengera", "Rugabano", "Ruganda", "Rwankuba", "Twumba"],
+            "Rusizi": ["Bugarama", "Butare", "Bweyeye", "Gashonga", "Giheke", "Gihundwe", "Kamembe", "Muganza", "Mururu", "Nkanka", "Nkombo", "Nyakabuye", "Nyakarenzo", "Nzahaha", "Rwimbogo", "Shangi"],
+            "Nyamasheke": ["Bushekeri", "Bushenge", "Cyato", "Gihombo", "Kagano", "Kanjongo", "Karambi", "Karengera", "Kirimbi", "Macuba", "Mahembe", "Nyabitekeri", "Rangiro", "Ruharambuga", "Shangi"],
+            "Ngororero": ["Bwira", "Gatumba", "Hindiro", "Kabaya", "Kageyo", "Kavumu", "Matyazo", "Muhanda", "Muhororo", "Ndaro", "Ngororero", "Nyange", "Sovu"],
+            "Nyabihu": ["Bigogwe", "Jenda", "Jomba", "Kabatwa", "Karago", "Kintobo", "Mukamira", "Muringa", "Rambura", "Rugera", "Rurembo", "Shyira"]
+        },
+        "Northern Province": {
+            "Musanze": ["Busogo", "Cyuve", "Gacaca", "Gashaki", "Gataraga", "Kimonyi", "Kinigi", "Muhoza", "Muko", "Musanze", "Nyange", "Remera", "Shingiro", "Nkotsi", "Rwaza"],
+            "Burera": ["Bungwe", "Butaro", "Cyanika", "Cyeru", "Gahunga", "Gatebe", "Gitovu", "Kagogo", "Kinoni", "Kinyababa", "Kivuye", "Nemba", "Rugarama", "Rugendabari", "Ruhunde", "Rusarabuge", "Rwerere"],
+            "Gakenke": ["Busengo", "Coko", "Cyabingo", "Gakenke", "Gashenyi", "Mugunga", "Janja", "Kamubuga", "Karambo", "Kivuruga", "Mataba", "Minazi", "Muhondo", "Muyongwe", "Muzo", "Nemba", "Ruli", "Rusasa", "Rushashi"],
+            "Gicumbi": ["Bukure", "Bwisige", "Byumba", "Cyumba", "Giti", "Kaniga", "Manyagiro", "Miyove", "Kageyo", "Mukarange", "Muko", "Mutete", "Nyamiyaga", "Nyankenke", "Rushaki", "Rutare", "Ruvune", "Rwamiko", "Shangasha"],
+            "Rulindo": ["Base", "Burega", "Bushoki", "Buyoga", "Cyinzuzi", "Cyungo", "Kinihira", "Kisaro", "Masoro", "Mbogo", "Murambi", "Ngoma", "Ntarabana", "Rurembo", "Rusiga", "Shyorongi"]
+        },
+        "Southern Province": {
+            "Huye": ["Gishamvu", "Karama", "Kigoma", "Kinazi", "Maraba", "Mbazi", "Mukura", "Ngoma", "Ruhashya", "Rusatira", "Rwaniro", "Tumba"],
+            "Muhanga": ["Cyeza", "Kabacuzi", "Kiyumba", "Muhanga", "Mushishiro", "Nyabinoni", "Nyamabuye", "Nyamusambi", "Rongi", "Rugendabari"],
+            "Kamonyi": ["Gacurabwenge", "Karama", "Kayenzi", "Kayumbu", "Mugina", "Musambira", "Ngamba", "Nyamiyaga", "Nyarubaka", "Rugalika", "Runda"],
+            "Nyanza": ["Busasamana", "Busoro", "Cyabakamyi", "Kibirizi", "Kigoma", "Mukingo", "Muyira", "Ntyazo", "Nyagisozi", "Rwabicuma"],
+            "Ruhango": ["Bweramana", "Byimana", "Kabagari", "Kinazi", "Mbuye", "Mwendo", "Ntongwe", "Ruhango", "Kinihira"],
+            "Gisagara": ["Gikonko", "Gishubi", "Kansi", "Kibirizi", "Kigembe", "Mamba", "Muganza", "Mugombwa", "Mukindo", "Musha", "Ndora", "Nyanza", "Save"],
+            "Nyamagabe": ["Buruhukiro", "Cyanika", "Gatare", "Kaduha", "Kamegeli", "Kibirizi", "Kibumbwe", "Kitabi", "Mbazi", "Mugano", "Musange", "Musebeya", "Mushubi", "Nkomane", "Gasaka", "Tare"],
+            "Nyaruguru": ["Cyahinda", "Busanze", "Kibeho", "Mata", "Muganza", "Munini", "Ngera", "Ngoma", "Nyabimata", "Nyagisozi", "Ruheru", "Ruramba"]
+        },
+        "Eastern Province": {
+            "Rwamagana": ["Fumbwe", "Gahengeri", "Gishari", "Karenge", "Kigabiro", "Muhazi", "Munyaga", "Mwulire", "Nyakariro", "Muyumbu", "Rubona", "Nzige"],
+            "Nyagatare": ["Gatunda", "Kiyombe", "Karama", "Karangazi", "Katabagemu", "Matimba", "Mimuli", "Mukama", "Musheli", "Nyagatare", "Rukomo", "Rwempasha", "Rwimiyaga", "Tabagwe"],
+            "Bugesera": ["Gashora", "Juru", "Kamabuye", "Ntarama", "Mareba", "Mayange", "Musenyi", "Mwogo", "Ngeruka", "Nyamata", "Nyarugenge", "Rilima", "Ruhuha", "Rweru", "Shyara"],
+            "Gatsibo": ["Gasange", "Gatsibo", "Gitoki", "Kabarore", "Kageyo", "Kiramuruzi", "Kiziguro", "Muhura", "Murambi", "Ngarama", "Nyagihanga", "Remera", "Rugarama", "Rwimbogo"],
+            "Kayonza": ["Gahini", "Kabare", "Kabarondo", "Mukarange", "Murama", "Murundi", "Mwiri", "Ndego", "Nyamirama", "Rukara", "Ruramira", "Rwinkwavu"],
+            "Kirehe": ["Gahara", "Gatore", "Kigarama", "Kigina", "Kirehe", "Mahama", "Mpanga", "Musaza", "Mushikiri", "Nasho", "Nyamugari", "Nyarubuye"],
+            "Ngoma": ["Gashanda", "Jarama", "Karembo", "Kazo", "Kibungo", "Mugesera", "Murama", "Mutenderi", "Remera", "Rukira", "Rukumberi", "Rurenge", "Sake", "Zaza"]
+        }
+    };
+
+    function initializeLocations() {
+        const provSelect = document.getElementById('provinceSelect');
+        provSelect.innerHTML = "";
+        for (let province in rwanda_locations) {
+            let opt = document.createElement('option');
+            opt.value = province;
+            opt.innerHTML = province;
+            provSelect.appendChild(opt);
+        }
+        updateDistrictDropdown();
+    }
+
+    function updateDistrictDropdown() {
+        const province = document.getElementById('provinceSelect').value;
+        const distSelect = document.getElementById('districtSelect');
+        distSelect.innerHTML = "";
+        
+        if (rwanda_locations[province]) {
+            for (let district in rwanda_locations[province]) {
+                let opt = document.createElement('option');
+                opt.value = district;
+                opt.innerHTML = district;
+                distSelect.appendChild(opt);
+            }
+        }
+        updateSectorDropdown();
+    }
+
+    function updateSectorDropdown() {
+        const province = document.getElementById('provinceSelect').value;
+        const district = document.getElementById('districtSelect').value;
+        const sectSelect = document.getElementById('sectorSelect');
+        sectSelect.innerHTML = "";
+        
+        if (rwanda_locations[province] && rwanda_locations[province][district]) {
+            rwanda_locations[province][district].forEach(sector => {
+                let opt = document.createElement('option');
+                opt.value = sector;
+                opt.innerHTML = sector;
+                sectSelect.appendChild(opt);
+            });
+        }
+    }
+
+    window.onload = function() {
+        initializeLocations();
+    };
+
+    function clearStatusAlerts() {
+        document.getElementById('authError').style.display = "none";
+        document.getElementById('authSuccess').style.display = "none";
+    }
+
+    function switchToRegisterMode() {
+        currentViewState = "register";
+        clearStatusAlerts();
+        document.getElementById('authTitle').innerText = "Create Account Registry";
+        document.getElementById('authSubtitle').innerText = "Create a secure account in the regional system database";
+        document.getElementById('passLabel').innerText = "Choose Password Key:";
+        document.getElementById('authBtn').innerText = "Register New Account";
+        document.getElementById('authBtn').className = ""; 
+        document.getElementById('toggleArea').innerHTML = `
+            <div>Already registered? <span class="toggle-link" onclick="switchToLoginMode()">Login Here</span></div>
+            <div>Forgot your login key? <span class="toggle-link" style="color: #ea580c;" onclick="switchToResetMode()">Reset Password</span></div>
+        `;
+    }
+
+    function switchToLoginMode() {
+        currentViewState = "login";
+        clearStatusAlerts();
+        document.getElementById('authTitle').innerText = "MBAZA Portal Login";
+        document.getElementById('authSubtitle').innerText = "Log into your profile account to access dashboard services";
+        document.getElementById('passLabel').innerText = "Password Key:";
+        document.getElementById('authBtn').innerText = "Secure Login";
+        document.getElementById('authBtn').className = "btn-login";
+        document.getElementById('toggleArea').innerHTML = `
+            <div>Don't have an account yet? <span class="toggle-link" onclick="switchToRegisterMode()">Create Account Here</span></div>
+            <div>Forgot your login key? <span class="toggle-link" style="color: #ea580c;" onclick="switchToResetMode()">Reset Password</span></div>
+        `;
+    }
+
+    function switchToResetMode() {
+        currentViewState = "reset";
+        clearStatusAlerts();
+        document.getElementById('authTitle').innerText = "Reset Account Password";
+        document.getElementById('authSubtitle').innerText = "Verify your details to establish a new security entry";
+        document.getElementById('passLabel').innerText = "Enter New Password Key:";
+        document.getElementById('authBtn').innerText = "Save New Password";
+        document.getElementById('authBtn').className = "btn-reset";
+        document.getElementById('toggleArea').innerHTML = `
+            <div>Remembered your key? <span class="toggle-link" onclick="switchToLoginMode()">Back to Login</span></div>
+        `;
+    }
+
+    function returnToGateway() {
+        document.getElementById('citizenDashboard').classList.add('hidden');
+        document.getElementById('leaderDashboard').classList.add('hidden');
+        document.getElementById('certificatePrintView').classList.add('hidden');
+        document.getElementById('authGateway').classList.remove('hidden');
+        switchToLoginMode();
+    }
+
+    async function processAuthSubmit() {
+        clearStatusAlerts();
+        const role = document.getElementById('role').value;
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        const errorDisplay = document.getElementById('authError');
+        const successDisplay = document.getElementById('authSuccess');
+
+        if (!username || !password) {
+            errorDisplay.innerText = "❌ Username and password fields cannot be empty.";
+            errorDisplay.style.display = "block";
+            return;
+        }
+
+        let targetRoute = '/api/login';
+        let customBody = JSON.stringify({ username, password, role });
+
+        if (currentViewState === 'register') {
+            targetRoute = '/api/register';
+        } else if (currentViewState === 'reset') {
+            targetRoute = '/api/reset-password';
+            customBody = JSON.stringify({ username, newPassword: password, role });
+        }
+        
+        try {
+            const response = await fetch(`${BACKEND_URL}${targetRoute}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: customBody
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                if (currentViewState === 'login') {
+                    activeSessionUser = username;
+                    document.getElementById('authGateway').classList.add('hidden');
+                    
+                    if (role === 'citizen') {
+                        document.getElementById('citizenUserDisplay').innerText = activeSessionUser;
+                        document.getElementById('citizenDashboard').classList.remove('hidden');
+                        initializeLocations();
+                    } else if (role === 'leader') {
+                        document.getElementById('leaderUserDisplay').innerText = activeSessionUser;
+                        document.getElementById('leaderDashboard').classList.remove('hidden');
+                        loadLeaderPanelData();
+                    }
+                } else if (currentViewState === 'register') {
+                    successDisplay.innerText = "✅ Account created successfully! Proceeding to Login panel...";
+                    successDisplay.style.display = "block";
+                    setTimeout(() => { switchToLoginMode(); }, 1200);
+                } else if (currentViewState === 'reset') {
+                    successDisplay.innerText = "✅ Password configuration modified! Try accessing your profile now.";
+                    successDisplay.style.display = "block";
+                    setTimeout(() => { switchToLoginMode(); }, 1500);
+                }
+            } else {
+                errorDisplay.innerText = `❌ ${data.error}`;
+                errorDisplay.style.display = "block";
+            }
+        } catch (err) {
+            errorDisplay.innerText = "❌ Server communication error. Ensure your Node background server is active.";
+            errorDisplay.style.display = "block";
+        }
+    }
+
+    async function submitApplicationForm() {
+        const name = document.getElementById('fullName').value.trim();
+        const nid = document.getElementById('nidNumber').value.trim();
+        const phone = document.getElementById('phoneNumber').value.trim();
+        const service = document.getElementById('serviceType').value;
+        
+        const province = document.getElementById('provinceSelect').value;
+        const district = document.getElementById('districtSelect').value;
+        const sector = document.getElementById('sectorSelect').value;
+        
+        const feedbackBox = document.getElementById('submitStatus');
+        feedbackBox.innerHTML = "";
+
+        if (!name || nid.length !== 16 || !phone) {
+            feedbackBox.style.color = "#dc2626";
+            feedbackBox.innerText = "⚠️ Validation error. National ID must be exactly 16 characters.";
+            return;
+        }
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/submit-application`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, nid, phone, service, province, district, sector, username: activeSessionUser })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                feedbackBox.style.color = "#16a34a";
+                feedbackBox.innerHTML = `✅ Application Saved!<br>Tracking ID: <span style="font-family:monospace; font-size:16px; background:#e2e8f0; padding:2px 6px; color:#1e293b; font-weight:bold;">${result.trackingId}</span>`;
+            }
+        } catch (e) {
+            feedbackBox.style.color = "#dc2626";
+            feedbackBox.innerText = "Error sending data payload to backend server.";
+        }
+    }
+
+    async function loadLeaderPanelData() {
+        try {
+            const response = await fetch(`${BACKEND_URL}/get-applications`);
+            const data = await response.json();
+            const tbody = document.getElementById('leaderTableBody');
+            tbody.innerHTML = "";
+
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#64748b;">No system submissions logged in database registry yet.</td></tr>`;
+                return;
+            }
+
+            data.forEach(app => {
+                const isApproved = app.status === 'Approved';
+                const badgeClass = isApproved ? 'approved' : 'pending';
+                const actionButtonElement = isApproved ? 
+                    `<b style="color:#16a34a;">Approved ✓</b>` : 
+                    `<button class="btn-approve" onclick="executeLeaderApproval('${app.id}')">Approve & Notify</button>`;
+                
+                const visibleOtp = app.otp ? app.otp : `<i style="color:#94a3b8">None</i>`;
+                const locationProfile = `${app.district || 'Rutsiro'} (${app.sector || 'Mushubati'})`;
+
+                tbody.insertAdjacentHTML('beforeend', `
+                    <tr>
+                        <td><b>${app.id}</b></td>
+                        <td>${app.name}</td>
+                        <td><small>${locationProfile}</small></td>
+                        <td>${app.service}</td>
+                        <td><span class="status-badge ${badgeClass}">${app.status}</span></td>
+                        <td>${actionButtonElement}</td>
+                        <td style="font-family:monospace; font-size:15px; font-weight:bold; color:#ef4444;">${visibleOtp}</td>
+                    </tr>
+                `);
+            });
+        } catch (err) {
+            console.error("Failed to load table content data entries.", err);
+        }
+    }
+
+    async function executeLeaderApproval(id) {
+        try {
+            const response = await fetch(`${BACKEND_URL}/approve-application/${id}`, { method: 'POST' });
+            const data = await response.json();
+            if(data.success) {
+                loadLeaderPanelData();
+            }
+        } catch(e) {
+            alert("Error updating approval state.");
+        }
+    }
+
+    async function requestCertificateUnlock() {
+        const id = document.getElementById('trackingIdInput').value.trim();
+        const userOtp = document.getElementById('otpInput').value.trim();
+        const verificationError = document.getElementById('otpError');
+        verificationError.style.display = "none";
+
+        if (!id || !userOtp) {
+            verificationError.innerText = "❌ Please provide both the tracking ID and your OTP code.";
+            verificationError.style.display = "block";
+            return;
+        }
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/verify-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, userOtp })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                document.getElementById('citizenDashboard').classList.add('hidden');
+                
+                document.getElementById('lbl-name').innerText = result.appData.name;
+                document.getElementById('lbl-nid').innerText = result.appData.nid;
+                document.getElementById('lbl-service').innerText = result.appData.service;
+                document.getElementById('lbl-date').innerText = result.appData.date;
+                
+                document.getElementById('lbl-province').innerText = result.appData.province;
+                document.getElementById('lbl-district').innerText = result.appData.district;
+                document.getElementById('lbl-sector').innerText = result.appData.sector;
+                
+                document.getElementById('certificatePrintView').classList.remove('hidden');
+            } else {
+                verificationError.innerText = `❌ ${result.error || "Verification failed."}`;
+                verificationError.style.display = "block";
+            }
+        } catch (e) {
+            verificationError.innerText = "Timeout processing server signature verification.";
+            verificationError.style.display = "block";
+        }
+    }
+</script>
+</body>
+</html>
